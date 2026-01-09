@@ -28,8 +28,6 @@
 
 #if Z_FEATURE_LINK_TLS == 1
 
-static char *Myhostname = "/zenohd";
-
 uint16_t _z_get_link_mtu_tls(void) { return 65535; }
 
 z_result_t _z_endpoint_tls_valid(_z_endpoint_t *endpoint) {
@@ -86,7 +84,8 @@ static _z_config_t _z_tls_merge_config(_z_str_intmap_t *endpoint_cfg, const _z_c
                    {TLS_CONFIG_CONNECT_PRIVATE_KEY_BASE64_KEY, Z_CONFIG_TLS_CONNECT_PRIVATE_KEY_BASE64_KEY},
                    {TLS_CONFIG_CONNECT_CERTIFICATE_KEY, Z_CONFIG_TLS_CONNECT_CERTIFICATE_KEY},
                    {TLS_CONFIG_CONNECT_CERTIFICATE_BASE64_KEY, Z_CONFIG_TLS_CONNECT_CERTIFICATE_BASE64_KEY},
-                   {TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY, Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY}};
+                   {TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY, Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY},
+                   {TLS_CONFIG_HOSTNAME_KEY, Z_CONFIG_TLS_HOSTNAME_KEY}};
 
     for (size_t i = 0; i < sizeof(mapping) / sizeof(mapping[0]); i++) {
         if (_z_config_get(&cfg, mapping[i].locator_key) != NULL) {
@@ -112,10 +111,15 @@ static z_result_t _z_f_link_open_tls(_z_link_t *self) {
         return _Z_ERR_GENERIC;
     }
 
+    char *hostname = _z_config_get(&self->_endpoint._config, TLS_CONFIG_HOSTNAME_KEY);
+    if (hostname == NULL) {
+        hostname = Z_CONFIG_TLS_HOSTNAME_DEFAULT;
+    }
+
     _z_sys_net_endpoint_t rep = {0};
     ret = _z_create_endpoint_tcp(&rep, address, port);
     if (ret == _Z_RES_OK) {
-            ret = _z_open_tls(&self->_socket._tls, &rep, Myhostname, &self->_endpoint._config, true);
+            ret = _z_open_tls(&self->_socket._tls, &rep, hostname, &self->_endpoint._config, true);
     }
     _z_free_endpoint_tcp(&rep);
     z_free(address);
@@ -253,7 +257,13 @@ z_result_t _z_new_peer_tls(_z_endpoint_t *endpoint, _z_sys_net_socket_t *socket,
     }
 
     _z_config_t cfg = _z_tls_merge_config(&endpoint->_config, session_cfg);
-        ret = _z_open_tls((_z_tls_socket_t *)socket->_tls_sock, &sys_endpoint, Myhostname, &cfg, true);
+
+    char *hostname = _z_config_get(&cfg, TLS_CONFIG_HOSTNAME_KEY);
+    if (hostname == NULL) {
+        hostname = Z_CONFIG_TLS_HOSTNAME_DEFAULT;
+    }
+
+    ret = _z_open_tls((_z_tls_socket_t *)socket->_tls_sock, &sys_endpoint, hostname, &cfg, true);
     if (ret != _Z_RES_OK) {
         z_free(socket->_tls_sock);
         socket->_tls_sock = NULL;
