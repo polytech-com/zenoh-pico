@@ -61,6 +61,7 @@ extern "C" {
     do {                                                                 \
         char __timestamp[64];                                            \
         z_time_now_as_str(__timestamp, sizeof(__timestamp));             \
+        ZENOH_LOG_PRINT("[%s " #level " ::%s] ", __timestamp, __func__); \
         ZENOH_LOG_PRINT(__VA_ARGS__);                                    \
     } while (false)
 // In debug build, if a level is not enabled, the following macro is used instead
