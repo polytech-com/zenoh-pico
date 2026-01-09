@@ -169,6 +169,8 @@
 #define Z_CONFIG_TLS_CONNECT_CERTIFICATE_KEY 0x54
 #define Z_CONFIG_TLS_CONNECT_CERTIFICATE_BASE64_KEY 0x55
 #define Z_CONFIG_TLS_VERIFY_NAME_ON_CONNECT_KEY 0x56
+#define Z_CONFIG_TLS_HOSTNAME_KEY 0x57
+#define Z_CONFIG_TLS_HOSTNAME_DEFAULT "/zenohd"
 
 /*------------------ Compile-time configuration properties ------------------*/
 /**
