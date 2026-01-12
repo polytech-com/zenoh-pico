@@ -39,7 +39,7 @@
 #include "zenoh-pico/config.h"
 #include "zenoh-pico/link/config/tls.h"
 #include "zenoh-pico/system/link/tcp.h"
-#include "zenoh-pico/system/platform/zephyr.h" 
+#include "zenoh-pico/system/platform/zephyr.h"
 #include "zenoh-pico/utils/logging.h"
 #include "zenoh-pico/utils/pointers.h"
 
@@ -145,14 +145,12 @@ static z_result_t _z_tls_load_ca_certificate(_z_tls_context_t *ctx, const _z_str
         return _Z_ERR_GENERIC;
     }
 
-    if (ca_cert_str != NULL) {
-        int ret = mbedtls_x509_crt_parse(&ctx->_ca_cert, ca_cert_str, strlen(ca_cert_str)+1);
-        if (ret != 0) {
-            _Z_ERROR("Failed to parse CA certificate: -0x%04x", -ret);
-            return _Z_ERR_GENERIC;
-        }
-        _Z_DEBUG("Loaded CA certificate: \n\n%s\n\n", ca_cert_str);
+    int ret = mbedtls_x509_crt_parse(&ctx->_ca_cert, ca_cert_str, strlen(ca_cert_str)+1);
+    if (ret != 0) {
+        _Z_ERROR("Failed to parse CA certificate: -0x%04x", -ret);
+        return _Z_ERR_GENERIC;
     }
+    _Z_DEBUG("Loaded CA certificate");
 
     return _Z_RES_OK;
 }
@@ -172,10 +170,10 @@ static z_result_t _z_tls_load_listen_cert(_z_tls_context_t *ctx, const _z_str_in
         #error "MBedTLS version not supported."
 #endif
     if (ret != 0) {
-        _Z_ERROR("Failed to parse listening side private key file %s: -0x%04x", listen_key_str, -ret);
+        _Z_ERROR("Failed to parse listening side private key: -0x%04x", -ret);
         return _Z_ERR_GENERIC;
     }
-    _Z_DEBUG("Loaded listening private key from %s", listen_key_str);
+    _Z_DEBUG("Loaded listening private key");
 
     ret = mbedtls_x509_crt_parse(&ctx->_listen_cert, listen_cert_str, strlen(listen_cert_str) + 1);
     if (ret != 0) {
@@ -183,8 +181,6 @@ static z_result_t _z_tls_load_listen_cert(_z_tls_context_t *ctx, const _z_str_in
         return _Z_ERR_GENERIC;
     }
     _Z_DEBUG("Loaded listening side certificate");
-
-
     return _Z_RES_OK;
 }
 
@@ -198,7 +194,7 @@ static z_result_t _z_tls_load_client_cert(_z_tls_context_t *ctx, const _z_str_in
         return _Z_ERR_GENERIC;
     }
 
-#if MBEDTLS_VERSION_MAJOR >= 3    
+#if MBEDTLS_VERSION_MAJOR >= 3
     int ret = mbedtls_pk_parse_key(&ctx->_client_key, key_str, strlen(key_str)+1, NULL, 0, mbedtls_hmac_drbg_random, &ctx->_hmac_drbg);
 #else
     #error "MBedTLS version not supported."
@@ -207,7 +203,7 @@ static z_result_t _z_tls_load_client_cert(_z_tls_context_t *ctx, const _z_str_in
         _Z_ERROR("Failed to parse client private key. Got TLS-error: -0x%04x", -ret);
         return _Z_ERR_GENERIC;
     }
-    _Z_DEBUG("Loaded client private key: \n %s", key_str);
+    _Z_DEBUG("Loaded client private key");
     
     ret = mbedtls_x509_crt_parse(&ctx->_client_cert, cert_path, strlen(cert_path)+1);
     if (ret != 0) {
