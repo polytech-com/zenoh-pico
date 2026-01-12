@@ -284,9 +284,8 @@ z_result_t _z_open_tls(_z_tls_socket_t *sock, const _z_sys_net_endpoint_t *rep, 
 
     mbedtls_ssl_conf_authmode(&sock->_tls_ctx->_ssl_config, MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_rng(&sock->_tls_ctx->_ssl_config, mbedtls_hmac_drbg_random, &sock->_tls_ctx->_hmac_drbg);
-    mbedtls_ssl_conf_min_tls_version(&sock->_tls_ctx->_ssl_config, MBEDTLS_SSL_VERSION_TLS1_3);
+    mbedtls_ssl_conf_min_tls_version(&sock->_tls_ctx->_ssl_config, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_max_tls_version(&sock->_tls_ctx->_ssl_config, MBEDTLS_SSL_VERSION_TLS1_3);
-
 
     if (enable_mtls) {
         _Z_DEBUG("Configuring client certificate for mTLS");
