@@ -141,7 +141,7 @@ cleanup:
 }
 
 z_result_t _z_new_link_tcp(_z_link_t *zl, _z_endpoint_t *endpoint) {
-    _Z_DEBUG("Creating new TCP link");
+
     z_result_t ret = _Z_RES_OK;
     zl->_type = _Z_LINK_TYPE_TCP;
     zl->_cap._transport = Z_LINK_CAP_TRANSPORT_UNICAST;

@@ -119,7 +119,7 @@ static z_result_t _z_f_link_open_tls(_z_link_t *self) {
     _z_sys_net_endpoint_t rep = {0};
     ret = _z_create_endpoint_tcp(&rep, address, port);
     if (ret == _Z_RES_OK) {
-        ret = _z_open_tls(&self->_socket._tls, &rep, hostname, &self->_endpoint._config, true);
+        ret = _z_open_tls(&self->_socket._tls, &rep, hostname, &self->_endpoint._config, false);
     }
     _z_free_endpoint_tcp(&rep);
     z_free(address);
