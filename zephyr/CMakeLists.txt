@@ -48,11 +48,8 @@ file(GLOB_RECURSE Sources
   "../src/system/common/*.c"
 )
 
-# file (GLOB Sources_Zephyr "../src/system/zephyr/*.c" "../src/system/unix/*.c" "../src/system/unix/link/*.c")
 file (GLOB Sources_Zephyr "../src/system/zephyr/*.c")
 list(APPEND Sources ${Sources_Zephyr})
-
-
 
 # Link against mbedtls if TLS is enabled
 if(CONFIG_ZENOH_PICO_LINK_TLS)
