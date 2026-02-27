@@ -24,7 +24,7 @@ extern "C" {
 
 #if Z_FEATURE_LINK_TLS == 1
 
-#define TLS_CONFIG_ARGC 12
+#define TLS_CONFIG_ARGC 13
 
 #define TLS_CONFIG_ROOT_CA_CERTIFICATE_KEY 0x01
 #define TLS_CONFIG_ROOT_CA_CERTIFICATE_STR "root_ca_certificate"
@@ -62,6 +62,9 @@ extern "C" {
 #define TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY 0x0C
 #define TLS_CONFIG_VERIFY_NAME_ON_CONNECT_STR "verify_name_on_connect"
 
+#define TLS_CONFIG_HOSTNAME_KEY 0x0D
+#define TLS_CONFIG_HOSTNAME_STR Z_CONFIG_TLS_HOSTNAME_DEFAULT
+
 #define TLS_CONFIG_MAPPING_BUILD                                       \
     _z_str_intmapping_t args[TLS_CONFIG_ARGC];                         \
     args[0]._key = TLS_CONFIG_ROOT_CA_CERTIFICATE_KEY;                 \
@@ -87,7 +90,9 @@ extern "C" {
     args[10]._key = TLS_CONFIG_CONNECT_CERTIFICATE_BASE64_KEY;         \
     args[10]._str = (char *)TLS_CONFIG_CONNECT_CERTIFICATE_BASE64_STR; \
     args[11]._key = TLS_CONFIG_VERIFY_NAME_ON_CONNECT_KEY;             \
-    args[11]._str = (char *)TLS_CONFIG_VERIFY_NAME_ON_CONNECT_STR;
+    args[11]._str = (char *)TLS_CONFIG_VERIFY_NAME_ON_CONNECT_STR;     \
+    args[12]._key = TLS_CONFIG_HOSTNAME_KEY;                           \
+    args[12]._str = (char *)TLS_CONFIG_HOSTNAME_STR;                   
 
 size_t _z_tls_config_strlen(const _z_str_intmap_t *s);
 

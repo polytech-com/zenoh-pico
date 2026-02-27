@@ -128,7 +128,7 @@ extern "C" {
 
 #define _Z_ERROR_LOG(err_code)                                                   \
     do {                                                                         \
-        _Z_TRACE("Error generated: %d, at %s:%d", err_code, __FILE__, __LINE__); \
+        _Z_ERROR("Error generated: %d, at %s:%d", err_code, __FILE__, __LINE__); \
     } while (false)
 
 #ifdef __cplusplus

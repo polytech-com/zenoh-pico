@@ -26,6 +26,7 @@ configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_UNICAST)
 configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_MULTICAST)
 configure_zenoh_feature(CONFIG_ZENOH_PICO_SCOUTING)
 configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_WS)
+configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_TLS)
 
 include(../features.cmake)
 
@@ -49,5 +50,11 @@ file(GLOB_RECURSE Sources
 
 file (GLOB Sources_Zephyr "../src/system/zephyr/*.c")
 list(APPEND Sources ${Sources_Zephyr})
+
+# Link against mbedtls if TLS is enabled
+if(CONFIG_ZENOH_PICO_LINK_TLS)
+  zephyr_link_libraries(mbedTLS)
+endif()
+
 zephyr_library_sources(${Sources})
 endif()
