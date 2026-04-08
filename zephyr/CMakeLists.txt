@@ -4,37 +4,15 @@ zephyr_compile_definitions(ZENOH_ZEPHYR)
 zephyr_include_directories(../include)
 zephyr_library()
 
-function(configure_zenoh_feature config)
-  string(REPLACE CONFIG_ZENOH_PICO Z_FEATURE feature ${config})
-  if(${config})
-    zephyr_compile_definitions(${feature}=1)
-  else()
-    zephyr_compile_definitions(${feature}=0)
-  endif()
-endfunction()
-
-
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_SERIAL)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_MULTI_THREAD)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_PUBLICATION)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_SUBSCRIPTION)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_QUERY)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_QUERYABLE)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_RAWETH_TRANSPORT)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_TCP)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_UNICAST)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_MULTICAST)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_SCOUTING)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_WS)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_TLS)
-
 include(../features.cmake)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/../include/zenoh-pico/config.h.in
-  ${CMAKE_CURRENT_SOURCE_DIR}/../include/zenoh-pico/config.h
+  ${CMAKE_CURRENT_BINARY_DIR}/include/zenoh-pico/config.h
   @ONLY
 )
+zephyr_library_include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 file(GLOB_RECURSE Sources
   "../src/api/*.c"
@@ -52,7 +30,7 @@ file (GLOB Sources_Zephyr "../src/system/zephyr/*.c")
 list(APPEND Sources ${Sources_Zephyr})
 
 # Link against mbedtls if TLS is enabled
-if(CONFIG_ZENOH_PICO_LINK_TLS)
+if(Z_FEATURE_LINK_TLS)
   zephyr_link_libraries(mbedTLS)
 endif()
 
