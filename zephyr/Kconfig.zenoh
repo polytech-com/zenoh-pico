@@ -65,6 +65,11 @@ config ZENOH_PICO_LINK_WS
 	help
 	  WS Link
 
+config ZENOH_PICO_LINK_TLS
+	bool "TLS Link"
+	help
+	  Enable the TLS link (uses the portable mbedTLS-based transport).
+
 config ZENOH_PICO_THREADS_NUM
 	int "Number of preallocated pthread stacks"
 	depends on ZENOH_PICO_MULTI_THREAD
@@ -73,5 +78,12 @@ config ZENOH_PICO_THREADS_NUM
 	  Number of preallocated pthread stacks used when no explicit thread
 	  attributes are provided (attr == NULL). Stack slots are returned to the
 	  pool when threads are joined.
+
+config ZENOH_PICO_STACK_SIZE
+	int "Zenoh thread stack size"
+	default MAIN_STACK_SIZE
+	help
+	  Stack size for zenoh-pico's preallocated pthread stacks, sized
+	  independently of MAIN_STACK_SIZE.
 
 endif

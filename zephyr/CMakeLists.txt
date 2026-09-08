@@ -4,29 +4,20 @@ zephyr_compile_definitions(ZENOH_ZEPHYR)
 zephyr_include_directories(../include)
 zephyr_library()
 
-function(configure_zenoh_feature config)
-  string(REPLACE CONFIG_ZENOH_PICO Z_FEATURE feature ${config})
-  if(${config})
-    zephyr_compile_definitions(${feature}=1)
-  else()
-    zephyr_compile_definitions(${feature}=0)
-  endif()
-endfunction()
+# Feature/config defaults (mirrors upstream root CMakeLists cache vars).
+# Kept out of the host build so it can drive config.h generation directly.
+include(../features.cmake)
 
-
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_SERIAL)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_MULTI_THREAD)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_PUBLICATION)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_SUBSCRIPTION)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_QUERY)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_QUERYABLE)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_RAWETH_TRANSPORT)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_TCP)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_UNICAST)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_UDP_MULTICAST)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_SCOUTING)
-configure_zenoh_feature(CONFIG_ZENOH_PICO_LINK_WS)
-
+# Generate config.h into the build tree from the CMake feature cache, matching
+# how the upstream host build produces it. Avoids Kconfig/Z_FEATURE double
+# definitions.
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include/zenoh-pico/config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/zenoh-pico/config.h
+  @ONLY
+)
+zephyr_library_include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+zephyr_include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 file(GLOB_RECURSE Sources
   "../src/api/*.c"
@@ -43,5 +34,11 @@ file(GLOB_RECURSE Sources
 
 file (GLOB Sources_Zephyr "../src/system/zephyr/*.c")
 list(APPEND Sources ${Sources_Zephyr})
+
+# Link against mbedTLS when the TLS link is enabled.
+if(Z_FEATURE_LINK_TLS)
+  zephyr_link_libraries(mbedTLS)
+endif()
+
 zephyr_library_sources(${Sources})
 endif()
