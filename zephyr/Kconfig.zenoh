@@ -81,4 +81,23 @@ config ZENOH_PICO_STACK_SIZE
 	  Stack size for zenoh-pico's preallocated pthread stacks, sized
 	  independently of MAIN_STACK_SIZE.
 
+config ZENOH_PICO_TCP_SEND_TIMEOUT_MS
+	int "TCP send timeout (ms)"
+	default 500
+	help
+	  SO_SNDTIMEO applied to zenoh TCP link sockets. Without it, send() on a
+	  blocking socket can stall indefinitely when the peer stops draining its
+	  receive window (a router that vanishes without a TCP RST), wedging the
+	  caller while it holds the transport TX mutex.
+
+	  A timed-out send is reported as a short write, which _z_link_send_wbuf()
+	  treats as _Z_ERR_TRANSPORT_TX_FAILED, tearing the link down for
+	  reconnection rather than continuing on a desynced stream.
+
+	  Keep this below the tightest thread watchdog that can reach zenoh's
+	  send() path. Requires NET_CONTEXT_SNDTIMEO; without it Zephyr rejects
+	  the socket option and the timeout is not applied.
+
+	  Set to 0 to leave the socket blocking (upstream behaviour).
+
 endif

@@ -27,6 +27,16 @@
 #include "zenoh-pico/utils/logging.h"
 #include "zenoh-pico/utils/pointers.h"
 
+// Bound how long a send() may block. A blocking send on a peer that has stopped draining its
+// receive window stalls the caller while it holds the transport TX mutex; the timeout turns that
+// into a short write, which _z_link_send_wbuf() reports as _Z_ERR_TRANSPORT_TX_FAILED so the link
+// is torn down and reconnected. 0 keeps the socket blocking (upstream behaviour).
+#ifdef CONFIG_ZENOH_PICO_TCP_SEND_TIMEOUT_MS
+#define Z_ZEPHYR_TCP_SEND_TIMEOUT_MS CONFIG_ZENOH_PICO_TCP_SEND_TIMEOUT_MS
+#else
+#define Z_ZEPHYR_TCP_SEND_TIMEOUT_MS 500
+#endif
+
 static z_result_t _z_tcp_zephyr_endpoint_init(_z_sys_net_endpoint_t *ep, const char *s_address, const char *s_port) {
     z_result_t ret = _Z_RES_OK;
 
@@ -67,6 +77,17 @@ static z_result_t _z_tcp_zephyr_open(_z_sys_net_socket_t *sock, const _z_sys_net
             /* Zephyr may reject this option depending on the network stack configuration. */
             _Z_ERROR_LOG(_Z_ERR_GENERIC);
         }
+
+#if Z_ZEPHYR_TCP_SEND_TIMEOUT_MS > 0
+        z_time_t snd_tv;
+        snd_tv.tv_sec = Z_ZEPHYR_TCP_SEND_TIMEOUT_MS / 1000;
+        snd_tv.tv_usec = (Z_ZEPHYR_TCP_SEND_TIMEOUT_MS % 1000) * 1000;
+        if ((ret == _Z_RES_OK) &&
+            (setsockopt(sock->_fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&snd_tv, sizeof(snd_tv)) < 0)) {
+            /* Requires CONFIG_NET_CONTEXT_SNDTIMEO; without it the send stays unbounded. */
+            _Z_ERROR_LOG(_Z_ERR_GENERIC);
+        }
+#endif
 
 #if Z_FEATURE_TCP_NODELAY == 1
         int optflag = 1;
