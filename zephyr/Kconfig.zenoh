@@ -81,8 +81,25 @@ config ZENOH_PICO_STACK_SIZE
 	  Stack size for zenoh-pico's preallocated pthread stacks, sized
 	  independently of MAIN_STACK_SIZE.
 
+config ZENOH_PICO_TCP_SEND_TIMEOUT
+	bool "Bound how long a zenoh TCP send() may block"
+	select NET_CONTEXT_SNDTIMEO if NETWORKING
+	help
+	  Applies SO_SNDTIMEO to zenoh TCP link sockets so a send() cannot block forever.
+
+	  Off by default: leaving sockets blocking is upstream behaviour, so enabling this
+	  is an explicit application decision. Enable it if a thread that can reach zenoh's
+	  send() path is under a watchdog, since a peer that stops draining its receive
+	  window will otherwise wedge that thread while it holds the transport TX mutex.
+
+	  This exists as a separate symbol purely so it can select NET_CONTEXT_SNDTIMEO:
+	  Kconfig cannot select from an int symbol. Disabling it leaves sockets blocking,
+	  which is upstream behaviour but allows a stalled peer to wedge the sending
+	  thread while it holds the transport TX mutex.
+
 config ZENOH_PICO_TCP_SEND_TIMEOUT_MS
 	int "TCP send timeout (ms)"
+	depends on ZENOH_PICO_TCP_SEND_TIMEOUT
 	default 500
 	help
 	  SO_SNDTIMEO applied to zenoh TCP link sockets. Without it, send() on a
@@ -95,9 +112,13 @@ config ZENOH_PICO_TCP_SEND_TIMEOUT_MS
 	  reconnection rather than continuing on a desynced stream.
 
 	  Keep this below the tightest thread watchdog that can reach zenoh's
-	  send() path. Requires NET_CONTEXT_SNDTIMEO; without it Zephyr rejects
-	  the socket option and the timeout is not applied.
+	  send() path.
 
-	  Set to 0 to leave the socket blocking (upstream behaviour).
+	  Selects NET_CONTEXT_SNDTIMEO, which Zephyr requires before it will honour
+	  SO_SNDTIMEO at all. A build with a non-zero timeout but without that option
+	  is rejected by a BUILD_ASSERT, and a socket that rejects the option at
+	  runtime fails to open, so the timeout can never be silently absent.
+
+	  Set ZENOH_PICO_TCP_SEND_TIMEOUT=n to leave the socket blocking (upstream behaviour).
 
 endif
