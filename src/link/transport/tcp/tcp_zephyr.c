@@ -27,6 +27,26 @@
 #include "zenoh-pico/utils/logging.h"
 #include "zenoh-pico/utils/pointers.h"
 
+// Bound how long a send() may block. A blocking send on a peer that has stopped draining its
+// receive window stalls the caller while it holds the transport TX mutex; the timeout turns that
+// into a short write, which _z_link_send_wbuf() reports as _Z_ERR_TRANSPORT_TX_FAILED so the link
+// is torn down and reconnected.
+// ZENOH_PICO_TCP_SEND_TIMEOUT_MS depends on ZENOH_PICO_TCP_SEND_TIMEOUT, so the symbol is absent
+// exactly when the feature is switched off; 0 then restores upstream blocking behaviour.
+#ifdef CONFIG_ZENOH_PICO_TCP_SEND_TIMEOUT_MS
+#define Z_ZEPHYR_TCP_SEND_TIMEOUT_MS CONFIG_ZENOH_PICO_TCP_SEND_TIMEOUT_MS
+#else
+#define Z_ZEPHYR_TCP_SEND_TIMEOUT_MS 0
+#endif
+
+#if Z_ZEPHYR_TCP_SEND_TIMEOUT_MS > 0
+/* Zephyr only honours SO_SNDTIMEO when NET_CONTEXT_SNDTIMEO is enabled (see sockets_inet.c);
+ * without it setsockopt() fails and send() would silently stay unbounded, which is the failure
+ * this timeout exists to prevent. Fail the build rather than the field. */
+BUILD_ASSERT(IS_ENABLED(CONFIG_NET_CONTEXT_SNDTIMEO),
+             "ZENOH_PICO_TCP_SEND_TIMEOUT_MS requires CONFIG_NET_CONTEXT_SNDTIMEO=y");
+#endif
+
 static z_result_t _z_tcp_zephyr_endpoint_init(_z_sys_net_endpoint_t *ep, const char *s_address, const char *s_port) {
     z_result_t ret = _Z_RES_OK;
 
@@ -55,6 +75,42 @@ static void _z_tcp_zephyr_endpoint_clear(_z_sys_net_endpoint_t *ep) {
     ep->_iptcp = NULL;
 }
 
+static z_result_t _z_tcp_zephyr_set_data_sockopts(int fd) {
+    (void)fd;  // Unused when every option below is compiled out.
+
+#if Z_ZEPHYR_TCP_SEND_TIMEOUT_MS > 0
+    z_time_t snd_tv;
+    snd_tv.tv_sec = Z_ZEPHYR_TCP_SEND_TIMEOUT_MS / 1000;
+    snd_tv.tv_usec = (Z_ZEPHYR_TCP_SEND_TIMEOUT_MS % 1000) * 1000;
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&snd_tv, sizeof(snd_tv)) < 0) {
+        /* Refuse the link rather than run with an unbounded send: a blocking send() with no
+         * timeout stalls its caller while holding the transport TX mutex. */
+        _Z_ERROR_LOG(_Z_ERR_GENERIC);
+        return _Z_ERR_GENERIC;
+    }
+#endif
+
+#if Z_FEATURE_TCP_NODELAY == 1
+    int optflag = 1;
+    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *)&optflag, sizeof(optflag)) < 0) {
+        _Z_ERROR_LOG(_Z_ERR_GENERIC);
+        return _Z_ERR_GENERIC;
+    }
+#endif
+
+#if LWIP_SO_LINGER == 1
+    struct linger ling;
+    ling.l_onoff = 1;
+    ling.l_linger = Z_TRANSPORT_LEASE / 1000;
+    if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(struct linger)) < 0) {
+        _Z_ERROR_LOG(_Z_ERR_GENERIC);
+        return _Z_ERR_GENERIC;
+    }
+#endif
+
+    return _Z_RES_OK;
+}
+
 static z_result_t _z_tcp_zephyr_open(_z_sys_net_socket_t *sock, const _z_sys_net_endpoint_t endpoint, uint32_t tout) {
     z_result_t ret = _Z_RES_OK;
 
@@ -68,25 +124,9 @@ static z_result_t _z_tcp_zephyr_open(_z_sys_net_socket_t *sock, const _z_sys_net
             _Z_ERROR_LOG(_Z_ERR_GENERIC);
         }
 
-#if Z_FEATURE_TCP_NODELAY == 1
-        int optflag = 1;
-        if ((ret == _Z_RES_OK) &&
-            (setsockopt(sock->_fd, IPPROTO_TCP, TCP_NODELAY, (void *)&optflag, sizeof(optflag)) < 0)) {
-            _Z_ERROR_LOG(_Z_ERR_GENERIC);
-            ret = _Z_ERR_GENERIC;
+        if (ret == _Z_RES_OK) {
+            ret = _z_tcp_zephyr_set_data_sockopts(sock->_fd);
         }
-#endif
-
-#if LWIP_SO_LINGER == 1
-        struct linger ling;
-        ling.l_onoff = 1;
-        ling.l_linger = Z_TRANSPORT_LEASE / 1000;
-        if ((ret == _Z_RES_OK) &&
-            (setsockopt(sock->_fd, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(struct linger)) < 0)) {
-            _Z_ERROR_LOG(_Z_ERR_GENERIC);
-            ret = _Z_ERR_GENERIC;
-        }
-#endif
 
         for (struct zsock_addrinfo *it = endpoint._iptcp; it != NULL; it = it->ai_next) {
             if ((ret == _Z_RES_OK) && (connect(sock->_fd, it->ai_addr, it->ai_addrlen) < 0)) {
@@ -164,22 +204,10 @@ static z_result_t _z_tcp_zephyr_accept(const _z_sys_net_socket_t *sock_in, _z_sy
         _Z_ERROR_RETURN(_Z_ERR_GENERIC);
     }
 
-#if Z_FEATURE_TCP_NODELAY == 1
-    int optflag = 1;
-    if (setsockopt(con_socket, IPPROTO_TCP, TCP_NODELAY, (void *)&optflag, sizeof(optflag)) < 0) {
+    if (_z_tcp_zephyr_set_data_sockopts(con_socket) != _Z_RES_OK) {
         close(con_socket);
         _Z_ERROR_RETURN(_Z_ERR_GENERIC);
     }
-#endif
-#if LWIP_SO_LINGER == 1
-    struct linger ling;
-    ling.l_onoff = 1;
-    ling.l_linger = Z_TRANSPORT_LEASE / 1000;
-    if (setsockopt(con_socket, SOL_SOCKET, SO_LINGER, (void *)&ling, sizeof(struct linger)) < 0) {
-        close(con_socket);
-        _Z_ERROR_RETURN(_Z_ERR_GENERIC);
-    }
-#endif
 
     sock_out->_fd = con_socket;
     return _Z_RES_OK;
