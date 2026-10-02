@@ -27,9 +27,12 @@ extern "C" {
 
 #if Z_FEATURE_LINK_TLS == 1
 
+#include "mbedtls/version.h"
+#if MBEDTLS_VERSION_MAJOR < 4
 #include "mbedtls/entropy.h"
-#include "mbedtls/error.h"
 #include "mbedtls/hmac_drbg.h"
+#endif
+#include "mbedtls/error.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/ssl.h"
@@ -38,8 +41,10 @@ extern "C" {
 typedef struct {
     mbedtls_ssl_context _ssl;
     mbedtls_ssl_config _ssl_config;
+#if MBEDTLS_VERSION_MAJOR < 4
     mbedtls_entropy_context _entropy;
     mbedtls_hmac_drbg_context _hmac_drbg;
+#endif
     mbedtls_x509_crt _ca_cert;
     mbedtls_pk_context _listen_key;
     mbedtls_x509_crt _listen_cert;
