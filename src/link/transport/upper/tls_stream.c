@@ -307,6 +307,14 @@ static z_result_t _z_tls_load_ca_certificate(_z_tls_context_t *ctx, const _z_str
         return _Z_ERR_GENERIC;
     }
 
+#if !defined(MBEDTLS_FS_IO)
+    if (ca_cert_str != NULL && ca_cert_base64 != NULL) {
+        _Z_WARN("Ignoring CA certificate file %s: file I/O is not available, using the base64 CA certificate",
+                ca_cert_str);
+        ca_cert_str = NULL;
+    }
+#endif
+
     if (ca_cert_str != NULL) {
         int ret = _z_tls_parse_cert_file(&ctx->_ca_cert, ca_cert_str);
         if (ret != 0) {
