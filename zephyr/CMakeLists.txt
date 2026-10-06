@@ -35,4 +35,8 @@ file(GLOB_RECURSE Sources
 file (GLOB Sources_Zephyr "../src/system/zephyr/*.c")
 list(APPEND Sources ${Sources_Zephyr})
 zephyr_library_sources(${Sources})
+
+if(Z_FEATURE_LINK_TLS)
+  zephyr_library_link_libraries(mbedTLS)
+endif()
 endif()
