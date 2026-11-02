@@ -2,3 +2,6 @@ name: zenoh-pico
 build:
   cmake: zephyr/
   kconfig: zephyr/Kconfig.zenoh
+security:
+  external-references:
+    - pkg:github/eclipse-zenoh/zenoh-pico@1.10.1
